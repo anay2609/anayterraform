@@ -1,33 +1,75 @@
 pipeline {
+
     agent any
+
+    environment {
+
+        AWS_ACCESS_KEY_ID = credentials('aws-creds')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-creds')
+
+    }
 
     stages {
 
-        stage('Terraform Init') {
+        stage('Checkout') {
+
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'aws-creds',
-                        usernameVariable: 'AWS_ACCESS_KEY_ID',
-                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                    )
-                ]) {
-                    sh 'terraform init'
-                }
+
+                git branch: 'main',
+                url:'https://github.com/anay2609/anayterraform.git'
+
             }
+
+        }
+
+        stage('Terraform Init') {
+
+            steps {
+
+                sh '''
+                terraform init
+                '''
+
+            }
+
+        }
+
+        stage('Validate') {
+
+            steps {
+
+                sh '''
+                terraform validate
+                '''
+
+            }
+
         }
 
         stage('Plan') {
+
             steps {
-                sh 'terraform plan'
+
+                sh '''
+                terraform plan
+                '''
+
             }
+
         }
 
         stage('Apply') {
+
             steps {
-                sh 'terraform apply -auto-approve'
+
+                sh '''
+                terraform apply -auto-approve
+                '''
+
             }
+
         }
 
     }
+
 }
