@@ -1,145 +1,221 @@
 pipeline {
 
-agent any
+    agent any
 
-parameters {
+    parameters {
 
-choice(
+        choice(
+            name: 'ACTION',
+            choices: ['APPLY', 'DESTROY'],
+            description: 'Terraform operation'
+        )
 
-name:'ACTION',
+    }
 
-choices:['APPLY','DESTROY'],
+    stages {
 
-description:'Terraform operation'
+        stage('Checkout') {
 
-)
+            steps {
 
-}
+                git(
+                    branch: 'main',
+                    url: 'https://github.com/anay2609/anayterraform.git'
+                )
 
-stages {
+            }
 
-stage('Checkout') {
+        }
 
-steps {
+        stage('Terraform Init') {
 
-git branch:'main',
+            steps {
 
-url:'https://github.com/anay2609/anayterraform.git'
+                dir('gcp') {
 
-}
+                    withCredentials([
 
-}
+                        file(
+                            credentialsId: 'gcp-creds',
+                            variable: 'GCPKEY'
+                        )
 
-stage('Terraform Init') {
+                    ]) {
 
-steps {
+                        sh '''
 
-dir('gcp') {
+                        export GOOGLE_APPLICATION_CREDENTIALS=$GCPKEY
 
-withCredentials([
+                        terraform init
 
-file(
+                        '''
 
-credentialsId:'gcp-creds',
+                    }
 
-variable:'GCPKEY'
+                }
 
-)
+            }
 
-]) {
+        }
 
-sh '''
+        stage('Validate') {
 
-cp $GCPKEY terraform-gcp.json
+            steps {
 
-export GOOGLE_APPLICATION_CREDENTIALS=terraform-gcp.json
+                dir('gcp') {
 
-terraform init
+                    withCredentials([
 
-'''
+                        file(
+                            credentialsId: 'gcp-creds',
+                            variable: 'GCPKEY'
+                        )
 
-}
+                    ]) {
 
-}
+                        sh '''
 
-}
+                        export GOOGLE_APPLICATION_CREDENTIALS=$GCPKEY
 
-}
+                        terraform validate
 
-stage('Plan') {
+                        '''
 
-when {
+                    }
 
-expression {
+                }
 
-params.ACTION=="APPLY"
+            }
 
-}
+        }
 
-}
+        stage('Plan') {
 
-steps {
+            when {
 
-dir('gcp') {
+                expression {
 
-sh 'terraform plan'
+                    params.ACTION == "APPLY"
 
-}
+                }
 
-}
+            }
 
-}
+            steps {
 
-stage('Apply') {
+                dir('gcp') {
 
-when {
+                    withCredentials([
 
-expression {
+                        file(
+                            credentialsId: 'gcp-creds',
+                            variable: 'GCPKEY'
+                        )
 
-params.ACTION=="APPLY"
+                    ]) {
 
-}
+                        sh '''
 
-}
+                        export GOOGLE_APPLICATION_CREDENTIALS=$GCPKEY
 
-steps {
+                        terraform plan
 
-dir('gcp') {
+                        '''
 
-sh 'terraform apply -auto-approve'
+                    }
 
-}
+                }
 
-}
+            }
 
-}
+        }
 
-stage('Destroy') {
+        stage('Apply') {
 
-when {
+            when {
 
-expression {
+                expression {
 
-params.ACTION=="DESTROY"
+                    params.ACTION == "APPLY"
 
-}
+                }
 
-}
+            }
 
-steps {
+            steps {
 
-input "Destroy GCP infra?"
+                input "Proceed with GCP deployment?"
 
-dir('gcp') {
+                dir('gcp') {
 
-sh 'terraform destroy -auto-approve'
+                    withCredentials([
 
-}
+                        file(
+                            credentialsId: 'gcp-creds',
+                            variable: 'GCPKEY'
+                        )
 
-}
+                    ]) {
 
-}
+                        sh '''
 
-}
+                        export GOOGLE_APPLICATION_CREDENTIALS=$GCPKEY
+
+                        terraform apply -auto-approve
+
+                        '''
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        stage('Destroy') {
+
+            when {
+
+                expression {
+
+                    params.ACTION == "DESTROY"
+
+                }
+
+            }
+
+            steps {
+
+                input "Destroy GCP infrastructure?"
+
+                dir('gcp') {
+
+                    withCredentials([
+
+                        file(
+                            credentialsId: 'gcp-creds',
+                            variable: 'GCPKEY'
+                        )
+
+                    ]) {
+
+                        sh '''
+
+                        export GOOGLE_APPLICATION_CREDENTIALS=$GCPKEY
+
+                        terraform destroy -auto-approve
+
+                        '''
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
 
 }
