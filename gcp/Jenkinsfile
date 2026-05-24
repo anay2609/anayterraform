@@ -1,0 +1,111 @@
+pipeline {
+
+agent any
+
+stages {
+
+stage('Checkout') {
+
+steps {
+
+git branch:'main',
+
+url:'https://github.com/anay2609/anayterraform.git'
+
+}
+
+}
+
+stage('Terraform Init') {
+
+steps {
+
+dir('gcp') {
+
+withCredentials([
+
+file(
+
+credentialsId:'gcp-creds',
+
+variable:'GCPKEY'
+
+)
+
+]) {
+
+sh '''
+
+cp $GCPKEY terraform-gcp.json
+
+export GOOGLE_APPLICATION_CREDENTIALS=terraform-gcp.json
+
+terraform init
+
+'''
+
+}
+
+}
+
+}
+
+}
+
+stage('Validate') {
+
+steps {
+
+dir('gcp') {
+
+sh 'terraform validate'
+
+}
+
+}
+
+}
+
+stage('Plan') {
+
+steps {
+
+dir('gcp') {
+
+sh '''
+
+export GOOGLE_APPLICATION_CREDENTIALS=terraform-gcp.json
+
+terraform plan
+
+'''
+
+}
+
+}
+
+}
+
+stage('Apply') {
+
+steps {
+
+dir('gcp') {
+
+sh '''
+
+export GOOGLE_APPLICATION_CREDENTIALS=terraform-gcp.json
+
+terraform apply -auto-approve
+
+'''
+
+}
+
+}
+
+}
+
+}
+
+}
