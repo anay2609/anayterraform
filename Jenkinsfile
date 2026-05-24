@@ -1,75 +1,33 @@
 pipeline {
+    agent any
 
-agent any
+    stages {
 
-environment {
+        stage('Terraform Init') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-creds',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh 'terraform init'
+                }
+            }
+        }
 
-AWS_ACCESS_KEY_ID = credentials('aws-creds')
+        stage('Plan') {
+            steps {
+                sh 'terraform plan'
+            }
+        }
 
-}
+        stage('Apply') {
+            steps {
+                sh 'terraform apply -auto-approve'
+            }
+        }
 
-stages {
-
-stage('Terraform Init') {
-
-steps {
-
-sh '''
-export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_USR
-
-export AWS_SECRET_ACCESS_KEY=$AWS_ACCESS_KEY_ID_PSW
-
-terraform init
-'''
-
-}
-
-}
-
-stage('Validate') {
-
-steps {
-
-sh 'terraform validate'
-
-}
-
-}
-
-stage('Plan') {
-
-steps {
-
-sh '''
-export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_USR
-
-export AWS_SECRET_ACCESS_KEY=$AWS_ACCESS_KEY_ID_PSW
-
-terraform plan
-'''
-
-}
-
-}
-
-stage('Apply') {
-
-steps {
-
-input "Deploy?"
-
-sh '''
-export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_USR
-
-export AWS_SECRET_ACCESS_KEY=$AWS_ACCESS_KEY_ID_PSW
-
-terraform apply -auto-approve
-'''
-
-}
-
-}
-
-}
-
+    }
 }
