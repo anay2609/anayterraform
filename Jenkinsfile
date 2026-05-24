@@ -1,75 +1,127 @@
 pipeline {
 
-    agent any
+agent any
 
-    environment {
+parameters {
 
-        AWS_ACCESS_KEY_ID = credentials('aws-creds')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-creds')
+choice(
 
-    }
+name:'ACTION',
 
-    stages {
+choices:['APPLY','DESTROY'],
 
-        stage('Checkout') {
+description:'Terraform operation'
 
-            steps {
+)
 
-                git branch: 'main',
-                url:'https://github.com/anay2609/anayterraform.git'
+}
 
-            }
+environment {
 
-        }
+AWS_ACCESS_KEY_ID = credentials('aws-creds')
 
-        stage('Terraform Init') {
+AWS_SECRET_ACCESS_KEY = credentials('aws-creds')
 
-            steps {
+}
 
-                sh '''
-                terraform init
-                '''
+stages {
 
-            }
+stage('Checkout') {
 
-        }
+steps {
 
-        stage('Validate') {
+git branch:'main',
 
-            steps {
+url:'https://github.com/anay2609/anayterraform.git'
 
-                sh '''
-                terraform validate
-                '''
+}
 
-            }
+}
 
-        }
+stage('Terraform Init') {
 
-        stage('Plan') {
+steps {
 
-            steps {
+sh 'terraform init'
 
-                sh '''
-                terraform plan
-                '''
+}
 
-            }
+}
 
-        }
+stage('Validate') {
 
-        stage('Apply') {
+steps {
 
-            steps {
+sh 'terraform validate'
 
-                sh '''
-                terraform apply -auto-approve
-                '''
+}
 
-            }
+}
 
-        }
+stage('Plan') {
 
-    }
+when {
+
+expression {
+
+params.ACTION=="APPLY"
+
+}
+
+}
+
+steps {
+
+sh 'terraform plan'
+
+}
+
+}
+
+stage('Apply') {
+
+when {
+
+expression {
+
+params.ACTION=="APPLY"
+
+}
+
+}
+
+steps {
+
+input "Proceed?"
+
+sh 'terraform apply -auto-approve'
+
+}
+
+}
+
+stage('Destroy') {
+
+when {
+
+expression {
+
+params.ACTION=="DESTROY"
+
+}
+
+}
+
+steps {
+
+input "Destroy infrastructure?"
+
+sh 'terraform destroy -auto-approve'
+
+}
+
+}
+
+}
 
 }
